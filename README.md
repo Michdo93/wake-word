@@ -8,53 +8,66 @@ Dieses Projekt ist speziell für verteilte Smart-Home-Labore konzipiert, bei den
 
 ## Inhaltsverzeichnis
 
-1. [Projektstruktur](https://www.google.com/search?q=%23projektstruktur)
-2. [Voraussetzungen](https://www.google.com/search?q=%23voraussetzungen)
-3. [Installation & Setup](https://www.google.com/search?q=%23installation--setup)
-4. [USBIP-Architektur & Mikrofon-Verteilung (Smart Home Lab)](https://www.google.com/search?q=%23usbip-architektur--mikrofon-verteilung-smart-home-lab)
-5. [Skripte im Überblick](https://www.google.com/search?q=%23skripte-im-%C3%BCberblick)
-6. [Verwendung & Ausführung](https://www.google.com/search?q=%23verwendung--ausf%C3%BChrung)
-7. [Konfiguration & Feinjustierung](https://www.google.com/search?q=%23konfiguration--feinjustierung)
+1. [Wichtige Architektur-Abgrenzung (Transkription vs. LLM)](#wichtige-architektur-abgrenzung-transkription-vs-llm)
+2. [Projektstruktur](#projektstruktur)
+3. [Voraussetzungen & Hardware](#voraussetzungen--hardware)
+4. [Installation & Setup](#installation--setup)
+5. [USBIP-Architektur & Mikrofon-Verteilung](#usbip-architektur--mikrofon-verteilung)
+6. [Pegelanpassung & Per-Mic Gain](#pegelanpassung--per-mic-gain)
+7. [Skripte im Überblick](#skripte-im-überblick)
+8. [MQTT-Integration](#mqtt-integration)
+9. [24/7 Betrieb als Systemd-Service](#247-betrieb-als-systemd-service)
+10. [Verwendung & Ausführung](#verwendung--ausführung)
+
+---
+
+## Wichtige Architektur-Abgrenzung (Transkription vs. LLM)
+
+> ⚠️ **Wichtiger Hinweis zum Einsatzzweck:**
+> Dieses Skript ist **keine** semantische KI oder Intent-Erkennung. Es führt keinerlei Analyse des Gesagten aus und steuert direkt **keinerlei** Smart-Home-Geräte. 
+> 
+> * **Was dieses Tool tut:** Es erkennt das Wake Word, nimmt den Audiostrom auf, transkribiert den gesprochenen Text buchstabengetreu über Vosk und gibt ihn aus (bzw. publisht ihn optional per MQTT).
+> * **Die Konsequenz:** Da Spracherkennung auf CPU-Modellen (wie dem kleinen oder mittleren Vosk-Modell) gelegentlich zu Tippfehlern, homophonen Verwechslungen oder Grammatikunzulänglichkeiten führen kann, muss eine nachgeschaltete Instanz (z. B. ein Large Language Model / LLM, Node-RED oder Home Assistant) die semantische Korrektur vornehmen. Das LLM ist dafür zuständig, Tippfehler im erkannten Text zu interpretieren, zu korrigieren und die eigentliche Smart-Home-Aktion abzuleiten.
 
 ---
 
 ## Projektstruktur
 
-Das Repository enthält im Root-Verzeichnis folgende Dateien und Ordner:
-
 ```text
-C:\Users\Admin\Desktop\Projekte\wake_word\
+/root/wake_word/
 │
-├── .gitignore                      # Ignoriert temporäre Dateien und Cache
-├── README.md                       # Diese Projektdokumentation
-├── diagnose_without_gain.py        # Testskript zur reinen Pegelmessung (Rohsignal)
-├── diagnose_with_gain.py           # Testskript mit Software-Verstärkung (Gain)
-├── wake_word.py                    # Einzelplatz-Skript (für 1 Mikrofon / Lokaltest)
-├── wake_word_multiple_microphones.py # Multi-Mikrofon-Skript für bis zu N USBIP-Mikrofone
-└── vosk-model-de-0.21/             # Entpacktes deutsches Vosk-Sprachmodell (ca. 1.9 GB)
-    ├── am/
-    ├── conf/
-    ├── graph/
-    └── ...
-
+├── .gitignore                          # Ignoriert temporäre Dateien und Cache
+├── README.md                           # Diese Projektdokumentation
+├── diagnose_without_gain.py            # Testskript zur reinen Pegelmessung
+├── diagnose_with_gain.py               # Testskript mit Software-Verstärkung
+├── wake_word.py                        # Einzelplatz-Skript (für 1 Mikrofon)
+├── wake_word_multiple_microphones.py   # Multi-Mikrofon-Skript (Konsole / Standalone)
+├── wake_word_multiple_microphones_mqtt.py # Multi-Mikrofon-Skript mit MQTT-Publish
+└── vosk-model-de-0.21/                 # Entpacktes deutsches Vosk-Sprachmodell (ca. 1.9 GB)
 ```
 
 ---
 
-## Voraussetzungen
+## Voraussetzungen & Hardware
 
 * **Python 3.8+**
-* Ausreichend Arbeitsspeicher (RAM) für das Sprachmodell (ca. 2–4 GB freier RAM für das Modell `vosk-model-de-0.21`).
-* **Hardware:** Ein oder mehrere USB-Mikrofone (z. B. USB-Grenzflächenmikrofone wie das *Fame Audio BM91U* für größere Raumabdeckungen von 5–10 qm).
-* **Netzwerkinfrastruktur:** Raspberry Pis als USBIP-Server (siehe [USBIP-Configuration Repository](https://github.com/Michdo93/USBIP-Configuration)).
+* **Arbeitsspeicher (RAM):** Ca. 2–4 GB freier RAM für das Modell `vosk-model-de-0.21`.
+* **Empfohlene Hardware:**
+* **Mikrofon:** *Fame Audio BM91U* (USB-Grenzflächenmikrofon / Boundary Mic). Durch die flache Bauweise und Kugelcharakteristik ideal zur raumfüllenden Abdeckung von 5–10 qm geeignet.
+* **Infrastruktur:** Raspberry Pis als USBIP-Server im Raum verteilt (siehe [USBIP-Configuration Repository](https://github.com/Michdo93/USBIP-Configuration)).
 
 ### Notwendige Python-Bibliotheken
 
-Installieren Sie die Abhängigkeiten über die PowerShell oder das Terminal:
+Für die Standard-Skripte:
 
 ```bash
 pip install vosk sounddevice numpy
+```
 
+Zusätzlich für `wake_word_multiple_microphones_mqtt.py`:
+
+```bash
+pip install paho-mqtt
 ```
 
 ---
@@ -62,82 +75,111 @@ pip install vosk sounddevice numpy
 ## Installation & Setup
 
 1. **Repository klonen:**
-Klonen Sie das Repository auf Ihrem System:
 ```bash
-git clone https://github.com/Michdo93/wake-word
+git clone [https://github.com/Michdo93/wake-word](https://github.com/Michdo93/wake-word)
 cd wake-word
-
 ```
 
-
-2. **Vosk-Modell herunterladen:**
-Laden Sie das deutsche Sprachmodell `vosk-model-de-0.21` (oder die leichtere Variante `vosk-model-small-de-0.15`) von [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models) herunter.
-3. **Modell entpacken:**
-Entpacken Sie den heruntergeladenen Modell-Ordner direkt in das Projektverzeichnis. Der Ordnername muss exakt `vosk-model-de-0.21` lauten.
+2. **Vosk-Modell herunterladen & entpacken:**
+Laden Sie `vosk-model-de-0.21` von [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models) herunter und entpacken Sie es im Projektverzeichnis.
 
 ---
 
-## USBIP-Architektur & Mikrofon-Verteilung (Smart Home Lab)
+## USBIP-Architektur & Mikrofon-Verteilung
 
-In einem verteilten Smart-Home-Labor stehen im Raum verteilt mehrere Raspberry Pis. Auf diesen Pis läuft ein USBIP-Server, der USB-Mikrofone (z. B. Konferenz-Grenzflächenmikrofone) im lokalen Netzwerk freigibt.
+Die Raspberry Pis im Raum stellen die USB-Mikrofone über USBIP im Netzwerk bereit. Die zentrale VM bindet diese ein. Das Betriebssystem der VM sieht jedes Mikrofon als eigenständiges Audiogerät.
+Die Multi-Mikrofon-Skripte scannen alle Inputs und starten für jedes Gerät einen isolierten Thread. Ein globaler `threading.Lock()` verhindert Echo und Mehrfachantworten nach dem "First-Wins"-Prinzip.
 
-### 1. Einrichtung der USBIP-Server (Raspberry Pis)
+---
 
-Eine vollständige Anleitung und Konfigurationshilfen zur Bereitstellung der Geräte finden Sie im zugehörigen Repository:
-👉 **[GitHub: Michdo93/USBIP-Configuration](https://github.com/Michdo93/USBIP-Configuration)**
+## Pegelanpassung & Per-Mic Gain
 
-### 2. Einbinden in die zentrale VM (Client)
+Da verschiedene Mikrofone im Raum unterschiedliche Grundpegel aufweisen, können Sie im Skript über das Dictionary `MIC_GAIN_CONFIG` individuelle Verstärkungen hinterlegen:
 
-Die zentrale VM (Ihr Host-System ohne GPU) bindet die entfernten USB-Mikrofone der Raspberry Pis über den USBIP-Client ein. Das Betriebssystem der VM erkennt jedes angeschlossene Mikrofon automatisch als eigenständiges USB-Audio-Eingabegerät (`Input-Device`).
+```python
+MIC_GAIN_CONFIG = {
+    "Fame Audio BM91U": 4.0,   # Geringerer Gain, da hochempfindliches Grenzflächenmikrofon
+    "default": 8.0             # Höherer Fallback-Gain für Standard-Dongles/Billig-Pucks
+}
+```
 
-### 3. Herausforderung bei 10+ Mikrofonen & die Lösung im Code:
-
-* **Keine Überlastung:** Auf einer CPU-VM wäre es fatal, für jedes Mikrofon ein separates, schweres Sprachmodell zu laden. Das Skript teilt sich daher ein **einziges zentrales Vosk-Modell** im Arbeitsspeicher.
-* **Multi-Threading:** Das Skript `wake_word_multiple_microphones.py` scannt automatisch alle verfügbaren Eingabegeräte und startet für jedes verbundene USBIP-Mikrofon einen eigenen, ressourcenschonenden Hintergrund-Thread.
-* **Kollisionsschutz ("First-Wins"-Lock):** Wenn in einem großen Raum mehrere Mikrofone gleichzeitig das Wake Word *"Jarvis"* hören, würde dies ohne Schutz zu Echo-Effekten und doppelten Antworten führen. Ein globaler `threading.Lock()` sorgt dafür, dass das Mikrofon mit dem ersten Treffer die exklusive Session übernimmt und alle anderen Mikrofone für die Dauer der Sprachaufnahme (sowie 3 Sekunden Stille-Puffer) automatisch stummschaltet.
+* **Zu niedriger Pegel (< 300 RMS):** Das Signal wird von Vosk als Rauschen verworfen. Erhöhen Sie den `GAIN_FACTOR` im Code oder drehen Sie den Pegel im Linux-Mixer (`alsamixer`) hoch.
+* **Zu hoher Pegel (> 25000 RMS):** Es droht Übersteuerung (Clipping). Reduzieren Sie den Gain, um Verzerrungen bei der Spracherkennung zu vermeiden.
 
 ---
 
 ## Skripte im Überblick
 
-* **`diagnose_without_gain.py`**: Hilfskript, um zu prüfen, ob Audio-Streams auf der VM ankommen und welche Rohpegel (RMS) das Mikrofon liefert.
-* **`diagnose_with_gain.py`**: Testskript mit integrierter Software-Verstärkung (`GAIN_FACTOR`), ideal für leisere Hardware oder schlecht ausgestattete Soundtreiber.
-* **`wake_word.py`**: Einfaches Standalone-Skript für den lokalen Test mit genau einem Mikrofon.
-* **`wake_word_multiple_microphones.py`**: Das Hauptskript für das Labor, das automatisch alle über USBIP angebundenen Mikrofone überwacht.
+* **`diagnose_without_gain.py`**: Prüft, ob Audio-Streams auf der VM ankommen und liefert die rohen RMS-Pegel.
+* **`diagnose_with_gain.py`**: Testskript mit Software-Verstärkung (`GAIN_FACTOR`) zur Kalibrierung.
+* **`wake_word.py`**: Einzelplatz-Skript für den lokalen Test mit exakt einem Mikrofon.
+* **`wake_word_multiple_microphones.py`**: Überwacht alle USBIP-Mikrofone parallel, steuert das First-Wins-Lock und gibt erkannte Befehle direkt in der **Konsole** aus.
+* **`wake_word_multiple_microphones_mqtt.py`**: Identisch zur Multi-Mikrofon-Logik, leitet den erkannten Text jedoch zusätzlich per **MQTT** an einen Broker weiter.
+
+---
+
+## MQTT-Integration (`wake_word_multiple_microphones_mqtt.py`)
+
+Nutzen Sie die MQTT-Variante, wenn die erkannten Befehle ins Smart Home (z. B. Node-RED, Home Assistant oder ein LLM-Service) übertragen werden sollen.
+
+* **Topic:** `smarthome/voice/command` (anpassbar im Code)
+* **Payload Beispiel (JSON):**
+```json
+{
+  "microphone": "Fame Audio BM91U (USB Audio)",
+  "command": "wie ist das wetter heute in furtwangen"
+}
+```
+
+---
+
+## 24/7 Betrieb als Systemd-Service
+
+Für den permanenten Hintergrundbetrieb auf einer Linux-VM (hier am Beispiel der MQTT-Variante):
+
+1. Erstellen Sie die Service-Datei:
+```bash
+sudo nano /etc/systemd/system/wakeword.service
+```
+
+
+2. Tragen Sie folgende Konfiguration ein:
+```ini
+[Unit]
+Description=Wake Word Smart Home Lab Service (Vosk + USBIP + MQTT)
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/wake_word
+ExecStart=/usr/bin/python3 /root/wake_word/wake_word_multiple_microphones_mqtt.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+3. Aktivieren und starten:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now wakeword.service
+```
 
 ---
 
 ## Verwendung & Ausführung
 
-### Multi-Mikrofon-Betrieb (Labor-Modus)
-
-Starten Sie das Multi-Mikrofon-Skript in Ihrer zentralen VM:
+Starten Sie das gewünschte Skript manuell oder über den Systemdienst:
 
 ```bash
+# Entweder die Konsolen-Version:
 python wake_word_multiple_microphones.py
 
+# Oder die MQTT-Version:
+python wake_word_multiple_microphones_mqtt.py
 ```
 
-### Ablauf der Interaktion:
-
-1. **Automatischer Scan:** Das Skript listet beim Start alle erkannten Audio-Inputs (Ihre USBIP-Mikrofone) auf und startet die Überwachung.
-2. **Standby:** Alle Threads lauschen im Hintergrund auf das Wake Word (`jarvis`).
-3. **Aktivierung & Lock:** Fällt das Wort an einem Mikrofon, greift der Lock. Die anderen Mikrofone werden ignoriert.
-4. **Satzaufnahme mit VAD (Voice Activity Detection):**
-* Sprechen Sie Ihren Befehl (z. B. *„Wie ist das Wetter heute in Furtwangen?“*).
-* **Stille-Timeout:** Sobald auf dem aktiven Mikrofon **3 Sekunden** lang ununterbrochen geschwiegen wird, bricht die Aufnahme automatisch ab.
-* **Maximales Limit:** Die Aufnahme stoppt spätestens nach **30 Sekunden** als Hard-Limit.
-
-
-5. **Ausgabe & Reset:** Der transkribierte Befehl wird ausgegeben, die Session wird freigegeben und das System kehrt nahtlos in den Standby-Modus zurück.
-
----
-
-## Konfiguration & Feinjustierung
-
-Im oberen Bereich der Python-Skripte können Sie Anpassungen vornehmen:
-
-* **`SAMPLE_RATE = 16000`**: Standard-Abtastrate für Vosk.
-* **`WAKE_WORD = "jarvis"`**: Das auslösende Schlüsselwort.
-* **`GAIN_FACTOR = 8.0`**: Software-Verstärkung, falls die USBIP-Mikrofone im System zu leise übertragen werden.
-* **`MODEL_PATH = "vosk-model-de-0.21"`**: Pfad zum verwendeten Sprachmodell.
+Das System lauscht nun permanent auf allen angebundenen USBIP-Mikrofonen, filtert Überlagerungen heraus, transkribiert lokal auf der CPU und übergibt die Daten an die nachgeschaltete Logik bzw. das LLM.
