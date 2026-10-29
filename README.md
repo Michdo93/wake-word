@@ -6,7 +6,7 @@ Dieses Projekt dient als Basis für verteilte Mikrofone (z. B. mit USBIP und Ras
 
 ---
 
-## 📋 Inhaltsverzeichnis
+## Inhaltsverzeichnis
 
 1. [Voraussetzungen](#voraussetzungen)
 2. [Installation & Setup](#installation--setup)
@@ -16,11 +16,11 @@ Dieses Projekt dient als Basis für verteilte Mikrofone (z. B. mit USBIP und Ras
 
 ---
 
-## 🛠️ Voraussetzungen
+## Voraussetzungen
 
-* **Python 3.8+**
-* Ein funktionierendes Mikrofon (unter Windows/Linux getestet)
-* Ausreichend Arbeitsspeicher (RAM) für das gewählte Vosk-Modell (ca. 2–4 GB frei für das große Modell).
+- **Python 3.8+**
+- Ein funktionierendes Mikrofon (unter Windows/Linux getestet)
+- Ausreichend Arbeitsspeicher (RAM) für das gewählte Vosk-Modell (ca. 2–4 GB frei für das große Modell).
 
 ### Notwendige Python-Bibliotheken
 
@@ -32,26 +32,27 @@ pip install vosk sounddevice numpy
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 1. **Repository klonen:**
-Klonen sie das Repository `wake-word` auf Ihrem System:
+
+Klonen Sie das Repository `wake-word` auf Ihrem System:
+
 ```bash
-git clone https://github.com/Michdo93/wake-word
+git clone [https://github.com/Michdo93/wake-word](https://github.com/Michdo93/wake-word)
 cd wake-word
 ```
-
 
 2. **Vosk-Modell herunterladen:**
 Laden Sie ein deutsches Sprachmodell von [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models) herunter (empfohlen für hohe Erkennungsrate auf CPUs: `vosk-model-de-0.21` oder die leichtere Variante `vosk-model-small-de-0.15`).
 3. **Modell entpacken:**
-Entpacken Sie den heruntergeladenen Modell-Ordner direkt in Ihr Projektverzeichnis `wake_word`. Der Ordnername (z. B. `vosk-model-de-0.21`) muss exakt mit dem Pfad im Skript übereinstimmen.
+Entpacken Sie den heruntergeladenen Modell-Ordner direkt in Ihr Projektverzeichnis. Der Ordnername (z. B. `vosk-model-de-0.21`) muss exakt mit dem Pfad im Skript übereinstimmen.
 4. **Skript ablegen:**
 Speichern Sie das Hauptskript als `wake_word.py` im selben Verzeichnis.
 
 ---
 
-## 💡 Verwendung
+## Verwendung
 
 Starten Sie das Skript direkt über die Konsole:
 
@@ -68,12 +69,11 @@ python wake_word.py
 * **Stille-Erkennung:** Sobald Sie **3 Sekunden** lang schweigen, stoppt die Aufnahme automatisch.
 * **Sicherheitslimit:** Die Aufnahme bricht spätestens nach **30 Sekunden** automatisch ab.
 
-
 4. **Ausgabe:** Der erkannte Text wird ausgegeben und das System kehrt in den Standby zurück.
 
 ---
 
-## 📂 Projektstruktur
+## Projektstruktur
 
 ```text
 wake_word/
@@ -88,7 +88,7 @@ wake_word/
 
 ---
 
-## ⚙️ Konfiguration & Feinjustierung
+## Konfiguration & Feinjustierung
 
 Im oberen Bereich der `wake_word.py` können Sie Parameter an Ihre Hardware anpassen:
 
