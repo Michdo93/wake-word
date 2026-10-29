@@ -2,17 +2,17 @@
 
 Ein leichtgewichtiger, vollständig lokaler Sprachassistent in **Python**, der auf einer CPU ohne GPU läuft. Das System horcht im Hintergrund auf ein Wake Word (z. B. *„Jarvis“*), wechselt bei Erkennung in den Aktiv-Modus, zeichnet Sprache mit einer dynamischen Stille-Erkennung (VAD) auf und transkribiert den Befehl via **Vosk**.
 
-Dieses Projekt dient als Basis für verteilte Smart-Home-Labore (z. B. mit USBIP und Raspberry Pis).
+Dieses Projekt dient als Basis für verteilte Mikrofone (z. B. mit USBIP und Raspberry Pis).
 
 ---
 
 ## 📋 Inhaltsverzeichnis
 
-1. [Voraussetzungen](https://www.google.com/search?q=%23-voraussetzungen)
-2. [Installation & Setup](https://www.google.com/search?q=%23-installation--setup)
-3. [Verwendung](https://www.google.com/search?q=%23-verwendung)
-4. [Projektstruktur](https://www.google.com/search?q=%23-projektstruktur)
-5. [Konfiguration & Feinjustierung](https://www.google.com/search?q=%23-konfiguration--feinjustierung)
+1. [Voraussetzungen](#voraussetzungen)
+2. [Installation & Setup](#installation--setup)
+3. [Verwendung](#verwendung)
+4. [Projektstruktur](#projektstruktur)
+5. [Konfiguration & Feinjustierung](#konfiguration--feinjustierung)
 
 ---
 
